@@ -226,8 +226,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._W = None
-        self._b = None
+        self._W = xavier_init((self.n_in[1],self.n_out[1]))
+        self._b = np.zeros((self.n_in[0], self.n_out[1]))
 
         self._cache_current = None
         self._grad_W_current = None
@@ -253,7 +253,12 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        Z = np.add(np.matmul(x,self._W),self._b)
+    
+        assert(Z.shape == (x.shape[0], self._W.shape[1]))
+        self._cache_current = (x, self._W, self._b)
+    
+        return Z
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -276,7 +281,18 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        x,W,b = self._cache_current
+        print("grad_z NxM",grad_z.shape)
+
+        self._grad_W_current = np.matmul(x.T,grad_z)
+        self._grad_b_current = np.matmul(np.ones((grad_z.shape[0],grad_z.shape[0])),grad_z) 
+        _grad_x_current = np.matmul(grad_z,W.T)
+
+        assert (_grad_x_current.shape == x.shape)
+        assert (self._grad_W_current.shape == self._W.shape)
+        assert (self._grad_b_current.shape == self._b.shape)
+
+        return _grad_x_current
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -293,8 +309,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
-
+        self._W = self._W - learning_rate*self._grad_W_current
+        self._b = self._b - learning_rate*self._grad_b_current
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -633,4 +649,26 @@ def example_main():
 
 
 if __name__ == "__main__":
-    example_main()
+    #example_main()
+    dat = np.loadtxt("iris.dat")
+    out_size = 3
+    
+    print("x NxD",dat.shape)
+    print(dat[:5])
+    n_in = dat.shape
+    n_out = (n_in[0],out_size)
+    my_layer = LinearLayer(n_in,n_out)
+    
+    print("W DxM",my_layer._W.shape)
+    print(my_layer._W)
+    print("b NxM",my_layer._b.shape)
+    print(my_layer._b[:5])
+    
+    my_layer.forward(dat)
+    my_layer.backward(np.random.rand(n_in[0],out_size))
+    my_layer.update_params(0.1)
+    
+    print("W DxM",my_layer._W.shape)
+    print(my_layer._W)
+    print("b NxM",my_layer._b.shape)
+    print(my_layer._b[:5])
