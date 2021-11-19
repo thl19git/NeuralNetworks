@@ -104,6 +104,10 @@ class SigmoidLayer(Layer):
         """
         self._cache_current = None
 
+    @staticmethod
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+
     def forward(self, x):
         """ 
         Performs forward pass through the Sigmoid layer.
@@ -120,7 +124,8 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        self._cache_current = x
+        return self.sigmoid(x)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -143,7 +148,9 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        x = self._cache_current
+        grad_x = self.sigmoid(x) * (1 - self.sigmoid(x))
+        return grad_z * grad_x
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -177,7 +184,9 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        self._cache_current = x
+        x[x<0] = 0
+        return x
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -200,7 +209,10 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        x = self._cache_current
+        grad_x = x
+        grad_x[x>0] = 1
+        return grad_z * grad_x
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -342,7 +354,18 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._layers = None
+        self._layers = []
+        sizes = [input_dim] + neurons
+        for i, layer in enumerate(activations):
+            self._layers.append(LinearLayer(sizes[i],sizes[i+1]))
+            if layer == "identity":
+                continue
+            elif layer == "relu":
+                self._layers.append(ReluLayer())
+            elif layer == "sigmoid":
+                self._layers.append(SigmoidLayer())
+            else:
+                print("Unknown layer type")
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -361,7 +384,10 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return np.zeros((1, self.neurons[-1])) # Replace with your own code
+        assert(len(self._layers)>0)
+        for layer in self._layers:
+            x = layer(x)
+        return x
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -385,7 +411,10 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        assert(len(self._layers)>0)
+        for layer in reversed(self._layers):
+            grad_z = layer.backward(grad_z)
+        return grad_z
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -402,7 +431,9 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        assert(len(self._layers)>0)
+        for layer in self._layers:
+            layer.update_params(learning_rate)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -650,25 +681,26 @@ def example_main():
 
 if __name__ == "__main__":
     #example_main()
-    dat = np.loadtxt("iris.dat")
-    out_size = 3
+    # dat = np.loadtxt("iris.dat")
+    # out_size = 3
     
-    print("x NxD",dat.shape)
-    print(dat[:5])
-    n_in = dat.shape
-    n_out = (n_in[0],out_size)
-    my_layer = LinearLayer(n_in,n_out)
+    # print("x NxD",dat.shape)
+    # print(dat[:5])
+    # n_in = dat.shape
+    # n_out = (n_in[0],out_size)
+    # my_layer = LinearLayer(n_in,n_out)
     
-    print("W DxM",my_layer._W.shape)
-    print(my_layer._W)
-    print("b NxM",my_layer._b.shape)
-    print(my_layer._b[:5])
+    # print("W DxM",my_layer._W.shape)
+    # print(my_layer._W)
+    # print("b NxM",my_layer._b.shape)
+    # print(my_layer._b[:5])
     
-    my_layer.forward(dat)
-    my_layer.backward(np.random.rand(n_in[0],out_size))
-    my_layer.update_params(0.1)
+    # my_layer.forward(dat)
+    # my_layer.backward(np.random.rand(n_in[0],out_size))
+    # my_layer.update_params(0.1)
     
-    print("W DxM",my_layer._W.shape)
-    print(my_layer._W)
-    print("b NxM",my_layer._b.shape)
-    print(my_layer._b[:5])
+    # print("W DxM",my_layer._W.shape)
+    # print(my_layer._W)
+    # print("b NxM",my_layer._b.shape)
+    # print(my_layer._b[:5])
+    MultiLayerNetwork(5,[6,6,3],["sigmoid","relu","linear"])
