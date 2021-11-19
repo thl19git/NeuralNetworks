@@ -238,8 +238,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._W = xavier_init((self.n_in[1],self.n_out[1]))
-        self._b = np.zeros((self.n_in[0], self.n_out[1]))
+        self._W = xavier_init((self.n_in,self.n_out))
+        self._b = np.zeros((1, self.n_out))
 
         self._cache_current = None
         self._grad_W_current = None
@@ -294,10 +294,10 @@ class LinearLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         x,W,b = self._cache_current
-        print("grad_z NxM",grad_z.shape)
+        print("grad_z",grad_z.shape)
 
         self._grad_W_current = np.matmul(x.T,grad_z)
-        self._grad_b_current = np.matmul(np.ones((grad_z.shape[0],grad_z.shape[0])),grad_z) 
+        self._grad_b_current = np.matmul(np.ones((1,grad_z.shape[0])),grad_z) 
         _grad_x_current = np.matmul(grad_z,W.T)
 
         assert (_grad_x_current.shape == x.shape)
@@ -684,23 +684,23 @@ if __name__ == "__main__":
     # dat = np.loadtxt("iris.dat")
     # out_size = 3
     
-    # print("x NxD",dat.shape)
-    # print(dat[:5])
-    # n_in = dat.shape
-    # n_out = (n_in[0],out_size)
-    # my_layer = LinearLayer(n_in,n_out)
+    print("x",dat.shape)
+    print(dat[:5])
+    n_in = 7
+    n_out = 3
+    my_layer = LinearLayer(n_in,n_out)
     
-    # print("W DxM",my_layer._W.shape)
-    # print(my_layer._W)
-    # print("b NxM",my_layer._b.shape)
-    # print(my_layer._b[:5])
+    print("W",my_layer._W.shape)
+    print(my_layer._W)
+    print("b",my_layer._b.shape)
+    print(my_layer._b)
     
-    # my_layer.forward(dat)
-    # my_layer.backward(np.random.rand(n_in[0],out_size))
-    # my_layer.update_params(0.1)
+    print(my_layer.forward(dat).shape)
     
-    # print("W DxM",my_layer._W.shape)
-    # print(my_layer._W)
-    # print("b NxM",my_layer._b.shape)
-    # print(my_layer._b[:5])
-    MultiLayerNetwork(5,[6,6,3],["sigmoid","relu","linear"])
+    print(my_layer.backward(np.random.rand(dat.shape[0],out_size)).shape)
+    my_layer.update_params(0.1)
+    
+    print("W",my_layer._W.shape)
+    print(my_layer._W)
+    print("b",my_layer._b.shape)
+    print(my_layer._b)
