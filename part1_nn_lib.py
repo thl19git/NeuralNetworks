@@ -266,7 +266,7 @@ class LinearLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         Z = np.add(np.matmul(x,self._W),self._b)
-        #print(Z.shape,x.shape,self._W.shape)
+        
         assert(Z.shape == (x.shape[0], self._W.shape[1]))
         
         self._cache_current = (x, self._W, self._b)
@@ -295,7 +295,6 @@ class LinearLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         x,W,b = self._cache_current
-        #print("grad_z",grad_z.shape)
 
         self._grad_W_current = np.matmul(x.T,grad_z)
         self._grad_b_current = np.matmul(np.ones((1,grad_z.shape[0])),grad_z) 
@@ -592,7 +591,10 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        self.max_val = data.max()
+        self.min_val = data.min()
+        self.difference = self.max_val - self.min_val
+        self.to_add = 1-(self.max_val/self.difference)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -611,7 +613,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        return (data/self.difference)+self.to_add
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -630,7 +632,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        return (data-self.to_add)*self.difference
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -682,30 +684,7 @@ def example_main():
 
 if __name__ == "__main__":
     #example_main()
-    # dat = np.loadtxt("iris.dat")
-    # out_size = 3
-    
-    # print("x",dat.shape)
-    # print(dat[:5])
-    # n_in = 7
-    # n_out = 3
-    # my_layer = LinearLayer(n_in,n_out)
-    
-    # print("W",my_layer._W.shape)
-    # print(my_layer._W)
-    # print("b",my_layer._b.shape)
-    # print(my_layer._b)
-    
-    # print(my_layer.forward(dat).shape)
-    
-    # print(my_layer.backward(np.random.rand(dat.shape[0],out_size)).shape)
-    # my_layer.update_params(0.1)
-    
-    # print("W",my_layer._W.shape)
-    # print(my_layer._W)
-    # print("b",my_layer._b.shape)
-    # print(my_layer._b)
-
+    """
     input_dim = 4
     neurons = [16, 3]
     activations = ["relu", "identity"]
@@ -715,4 +694,11 @@ if __name__ == "__main__":
     back = net.backward(np.array([[0.6,0.21,-0.4],[-0.7,0.01,-0.42]]))
     net.update_params(0.0001)
     res2 = net(np.array([[7,12,0.6,-3],[0.1,3,54,0.6]]))
-    print(res2)
+    print(res2)"""
+
+    dat = np.loadtxt("iris.dat")
+    print(dat[:,:4])
+    prep = Preprocessor(dat[:,:4])
+    norm = prep.apply(dat[:,:4])
+    print(norm)
+    print(prep.revert(norm))
