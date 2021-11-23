@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+import math
 
 
 def xavier_init(size, gain = 1.0):
@@ -494,7 +495,13 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._loss_layer = None
+        if loss_fun == "mse":
+            self._loss_layer = MSELossLayer()
+        elif loss_fun == "cross_entropy":
+            self._loss_layer = CrossEntropyLossLayer()
+        else:
+            self._loss_layer = none
+            print("Invalid loss layer specified")
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -517,7 +524,9 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        assert len(input_dataset) == len(target_dataset)
+        indices = np.random.permutation(len(input_dataset))
+        return input_dataset[indices], target_dataset[indices]
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -546,7 +555,21 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        for epoch in range(self.nb_epoch):
+            if self.shuffle_flag:
+                input_dataset, target_dataset = self.shuffle(input_dataset,target_dataset)
+            batches = math.ceil(len(input_dataset)/self.batch_size)
+            for i in range(batches):
+                start = i*self.batch_size
+                if i < batches - 1:
+                    end = (i+1)*self.batch_size
+                else:
+                    end = len(input_dataset)
+                output = self.network.forward(input_dataset[start:end])
+                loss = self._loss_layer.forward(output, target_dataset[start:end])
+                loss_grad = self._loss_layer.backward()
+                grad = self.network.backward(loss_grad)
+                self.network.update_params(self.learning_rate)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -566,7 +589,9 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        output = self.network.forward(input_dataset)
+        loss = self._loss_layer.forward(output, target_dataset)
+        return loss
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -683,7 +708,7 @@ def example_main():
 
 
 if __name__ == "__main__":
-    #example_main()
+    example_main()
     """
     input_dim = 4
     neurons = [16, 3]
@@ -694,7 +719,7 @@ if __name__ == "__main__":
     back = net.backward(np.array([[0.6,0.21,-0.4],[-0.7,0.01,-0.42]]))
     net.update_params(0.0001)
     res2 = net(np.array([[7,12,0.6,-3],[0.1,3,54,0.6]]))
-    print(res2)"""
+    print(res2)
 
     dat = np.loadtxt("iris.dat")
     print(dat[:,:4])
@@ -702,3 +727,4 @@ if __name__ == "__main__":
     norm = prep.apply(dat[:,:4])
     print(norm)
     print(prep.revert(norm))
+    """
