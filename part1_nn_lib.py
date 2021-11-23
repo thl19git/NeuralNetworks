@@ -618,8 +618,6 @@ class Preprocessor(object):
         #######################################################################
         self.max_val = data.max()
         self.min_val = data.min()
-        self.difference = self.max_val - self.min_val
-        self.to_add = 1-(self.max_val/self.difference)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -638,7 +636,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return (data/self.difference)+self.to_add
+        return (data-self.min_val)/(self.max_val-self.min_val)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -657,7 +655,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return (data-self.to_add)*self.difference
+        return data*(self.max_val-self.min_val) + self.min_val
 
         #######################################################################
         #                       ** END OF YOUR CODE **
