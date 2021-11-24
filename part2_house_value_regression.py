@@ -2,6 +2,7 @@ import torch
 import pickle
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import LabelBinarizer
 
 class Regressor():
 
@@ -57,9 +58,42 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        # Replace this code with your own
+        # Fill missing values in x with median (quant) or mode (qual)
+        vals = x.loc[:, x.columns != "ocean_proximity"].median().to_dict()
+        vals["ocean_proximity"] = x.loc[:, x.columns == "ocean_proximity"].mode().to_dict()["ocean_proximity"][0]
+        x = x.fillna(vals)
+
+        # If training initialise label binarizer for ocean proximity
+        if training:
+            self.encoder = LabelBinarizer()
+            self.encoder.fit(x_train['ocean_proximity'])
+        
+        # Apply label binarization to x
+        transformed = self.encoder.transform(x['ocean_proximity'])
+        ohe_df = pd.DataFrame(transformed)
+        x = pd.concat([x, ohe_df], axis=1).drop(['ocean_proximity'], axis=1)
+
+        # Convert dataframes to numpy ndarrays
+        x = x.to_numpy()
+        if isinstance(y, pd.DataFrame):
+            y = y.to_numpy()
+
+        # If training extract minmax values
+        if training:
+            self.x_max = x.max(axis=0)
+            self.x_min = x.min(axis=0)
+            if isinstance(y, np.ndarray):
+                self.y_max = y.max(axis=0)
+                self.y_min = y.min(axis=0)
+
+        # Normalise values using MinMax normalisation
+        x = (x - self.x_min)/(self.x_max-self.x_min)
+        # Currently normalising y as this should help during training - remember to convert back!
+        if isinstance(y, np.ndarray):
+            y = (y - self.y_min)/(self.y_max-self.y_min)
+
         # Return preprocessed x and y, return None for y if it was None
-        return x, (y if isinstance(y, pd.DataFrame) else None)
+        return x, (y if isinstance(y, pd.np.ndarray) else None)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
