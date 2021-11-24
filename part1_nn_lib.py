@@ -617,9 +617,9 @@ class Preprocessor(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
         assert len(data) > 1
-        self.max_val = data.max()
-        self.min_val = data.min()
-        assert self.max_val != self.min_val
+        self.max_val = data.max(axis=0)
+        self.min_val = data.min(axis=0)
+        assert not np.array_equal(self.max_val,self.min_val)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
