@@ -169,7 +169,11 @@ class Regressor():
         #######################################################################
 
         X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
-        return 0 # Replace this code with your own
+        predictions = self.predict(X)
+        y = y.to_numpy()
+        mse = np.mean((predictions - y) ** 2)
+        rmse = np.sqrt(mse)
+        return rmse
 
         #######################################################################
         #                       ** END OF YOUR CODE **
