@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelBinarizer
 
 class Regressor():
 
-    def __init__(self, x, nb_epoch = 1000):
+    def __init__(self, x, nb_epoch = 1000, hidden_size = 1, activation_function = "identity"):
         # You can add any input parameters you need
         # Remember to set them with a default value for LabTS tests
         """ 
@@ -29,10 +29,28 @@ class Regressor():
         self.input_size = X.shape[1]
         self.output_size = 1
         self.nb_epoch = nb_epoch
+        self.hidden_size = hidden_size
+        self.activation_function = activation_function
 
-        self.linear = torch.nn.Linear(self.input_size,self.output_size)
+        if self.activation_function == "identity":
+            self.model = torch.nn.Sequential (
+                torch.nn.Linear(self.input_size, self.hidden_size),
+                torch.nn.Linear(self.hidden_size, self.output_size)
+            )
+        elif self.activation_function == "relu":
+            self.model = torch.nn.Sequential (
+                torch.nn.Linear(self.input_size, self.hidden_size),
+                torch.nn.ReLU(),
+                torch.nn.Linear(self.hidden_size, self.output_size)
+            )
+        elif self.activation_function == "sigmoid":
+            self.model = torch.nn.Sequential (
+                torch.nn.Linear(self.input_size, self.hidden_size),
+                torch.nn.Sigmoid(),
+                torch.nn.Linear(self.hidden_size, self.output_size)
+            )
         self.criterion = torch.nn.MSELoss()
-        self.optimiser = torch.optim.SGD(self.linear.parameters(), lr=0.001)
+        self.optimiser = torch.optim.SGD(self.model.parameters(), lr=0.001)
         return
 
         #######################################################################
@@ -131,7 +149,7 @@ class Regressor():
         for epoch in range(self.nb_epoch):
             self.optimiser.zero_grad()
 
-            y_hat = self.linear(x_train_tensor)
+            y_hat = self.model(x_train_tensor)
 
             loss = self.criterion(y_hat,y_train_tensor)
 
@@ -139,7 +157,7 @@ class Regressor():
 
             self.optimiser.step()
 
-            print(f"Epoch: {epoch}\t w: {self.linear.weight.data[0]}\t b: {self.linear.bias.data[0]:.4f} \t L: {loss:.4f}")
+            #print(f"Epoch: {epoch}\t w: {self.model.weight.data[0]}\t b: {self.model.bias.data[0]:.4f} \t L: {loss:.4f}")
         
         return self
 
@@ -168,7 +186,7 @@ class Regressor():
         X, _ = self._preprocessor(x, training = False) # Do not forget
         with torch.no_grad():
             x_test = torch.from_numpy(X).float()
-            p = self.linear(x_test).numpy()
+            p = self.model(x_test).numpy()
         #rescale predictions to convert back to standard form
         p = p*(self.y_max-self.y_min) + self.y_min
         return p
@@ -271,7 +289,7 @@ def example_main():
     # This example trains on the whole available dataset. 
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
-    regressor = Regressor(x_train, nb_epoch = 10)
+    regressor = Regressor(x_train, nb_epoch = 10, hidden_size = 3)
     regressor.fit(x_train, y_train)
     save_regressor(regressor)
 
