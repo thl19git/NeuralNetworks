@@ -2,6 +2,7 @@ import torch
 import pickle
 import numpy as np
 import pandas as pd
+import math
 from sklearn.preprocessing import LabelBinarizer
 
 class Regressor():
@@ -123,22 +124,38 @@ class Regressor():
 
         X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
 
-        x_train_tensor = torch.from_numpy(X).float()
-        y_train_tensor = torch.from_numpy(Y).float()
-
-        x_train_tensor.requires_grad_(True)
+        batch_size = 64
+        batches = math.ceil(len(X)/batch_size)
 
         for epoch in range(self.nb_epoch):
-            self.optimiser.zero_grad()
+            # Shuffle the data
+            indices = np.random.permutation(len(X))
+            X = X[indices]
+            Y = Y[indices]
 
-            y_hat = self.linear(x_train_tensor)
+            # Perform mini-batch gradient descent
+            for i in range(batches):
+                start = i*batch_size
+                if i < batches - 1:
+                    end = (i+1)*batch_size
+                else:
+                    end = len(X)
 
-            loss = self.criterion(y_hat,y_train_tensor)
+                x_train_tensor = torch.from_numpy(X[start:end]).float()
+                y_train_tensor = torch.from_numpy(Y[start:end]).float()
 
-            loss.backward()
+                x_train_tensor.requires_grad_(True)
 
-            self.optimiser.step()
+                self.optimiser.zero_grad()
 
+                y_hat = self.linear(x_train_tensor)
+
+                loss = self.criterion(y_hat,y_train_tensor)
+
+                loss.backward()
+
+                self.optimiser.step()
+                
             print(f"Epoch: {epoch}\t w: {self.linear.weight.data[0]}\t b: {self.linear.bias.data[0]:.4f} \t L: {loss:.4f}")
         
         return self
