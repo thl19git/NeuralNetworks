@@ -7,7 +7,7 @@ from sklearn.preprocessing import LabelBinarizer
 
 class Regressor():
 
-    def __init__(self, x, nb_epoch = 1000):
+    def __init__(self, x, nb_epoch = 1000, hidden_size = 0, activation_function = "identity", learning_rate = 0.01):
         # You can add any input parameters you need
         # Remember to set them with a default value for LabTS tests
         """ 
@@ -30,10 +30,31 @@ class Regressor():
         self.input_size = X.shape[1]
         self.output_size = 1
         self.nb_epoch = nb_epoch
+        self.hidden_size = hidden_size
+        self.activation_function = activation_function
 
-        self.linear = torch.nn.Linear(self.input_size,self.output_size)
+        if hidden_size > 0:
+            if self.activation_function == "identity":
+                self.model = torch.nn.Sequential (
+                    torch.nn.Linear(self.input_size, self.hidden_size),
+                    torch.nn.Linear(self.hidden_size, self.output_size)
+                )
+            elif self.activation_function == "relu":
+                self.model = torch.nn.Sequential (
+                    torch.nn.Linear(self.input_size, self.hidden_size),
+                    torch.nn.ReLU(),
+                    torch.nn.Linear(self.hidden_size, self.output_size)
+                )
+            elif self.activation_function == "sigmoid":
+                self.model = torch.nn.Sequential (
+                    torch.nn.Linear(self.input_size, self.hidden_size),
+                    torch.nn.Sigmoid(),
+                    torch.nn.Linear(self.hidden_size, self.output_size)
+                )
+        else:
+            self.model = torch.nn.Linear(self.input_size, self.output_size)
         self.criterion = torch.nn.MSELoss()
-        self.optimiser = torch.optim.SGD(self.linear.parameters(), lr=0.001)
+        self.optimiser = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
         return
 
         #######################################################################
@@ -150,29 +171,29 @@ class Regressor():
                 y_train_tensor = torch.from_numpy(Y[start:end]).float()
 
                 x_train_tensor.requires_grad_(True)
-
                 self.optimiser.zero_grad()
-                y_hat = self.linear(x_train_tensor)
+                y_hat = self.model(x_train_tensor)
                 loss = self.criterion(y_hat,y_train_tensor)
                 loss.backward()
                 self.optimiser.step()
 
+            # Check early stop
             if early_stop:
-                rsme = self.score(v_x,v_y)
-                if rsme < best_score:
-                    best_score = rsme
+                rmse = self.score(v_x,v_y)
+                #print("rmse: {}n".format(rmse))
+                if rmse < best_score:
+                    best_score = rmse
                     best_model = self
                 if stop_count == 10:
-                    if rsme >= old_score:
-                        break
+                    if rmse >= old_score:
+                        return best_model
                     else:
                         stop_count = 0
+                        old_score = rmse
                 else:
                     stop_count += 1
                 
-           # print(f"Epoch: {epoch}\t w: {self.linear.weight.data[0]}\t b: {self.linear.bias.data[0]:.4f} \t L: {loss:.4f}")
-        if early_stop:
-            return best_model
+            # print(f"Epoch: {epoch}\t w: {self.linear.weight.data[0]}\t b: {self.linear.bias.data[0]:.4f} \t L: {loss:.4f}")
         return self
 
         #######################################################################
@@ -200,7 +221,7 @@ class Regressor():
         X, _ = self._preprocessor(x, training = False) # Do not forget
         with torch.no_grad():
             x_test = torch.from_numpy(X).float()
-            p = self.linear(x_test).numpy()
+            p = self.model(x_test).numpy()
         #rescale predictions to convert back to standard form
         p = p*(self.y_max-self.y_min) + self.y_min
         return p
@@ -280,6 +301,8 @@ def RegressorHyperParameterSearch(data):
 
     rmse_best = float('inf')
     model_best_neurons = 0
+
+    # Split data in to training, validation and test sets
     data.sample(frac=1).reset_index(drop=True)
     output_label = "median_house_value"
     x = data.loc[:, data.columns != output_label]
@@ -292,21 +315,31 @@ def RegressorHyperParameterSearch(data):
     y_train = y[:split_train].reset_index(drop=True)
     y_val = y[split_train:split_val].reset_index(drop=True)
     y_test = y[split_val:].reset_index(drop=True)
-    for i in range(1,2):
-    #    "add something like hidden_layer_neurons = i"
-    #    "x_val, y_val, x_test, y_test yet to be defined"
-        regressor = Regressor(x_train, nb_epoch = 1000)
-        regressor.fit(x_train, y_train, x_val, y_val)
-        rmse_temp = regressor.score(x_val, y_val)
-        if rmse_temp < rmse_best:
-            rmse_best = rmse_temp
-            model_best = regressor
-            model_best_neurons = i
+
+    learning_rates = [0.0001,0.001,0.01,0.1]
+    activation_functions = ["identity", "relu", "sigmoid"]
+
+    for neurons in range(0,14):
+        for learning_rate in learning_rates:
+            for activation_function in activation_functions:
+                print("Training with: " + activation_function + ", " + str(neurons) + ", " + str(learning_rate))
+                regressor = Regressor(x_train, nb_epoch=1000, activation_function=activation_function, hidden_size=neurons, learning_rate=learning_rate)
+                regressor.fit(x_train, y_train, x_val, y_val)
+                rmse_temp = regressor.score(x_val, y_val)
+                print("rmse: {}\n".format(rmse_temp))
+                if rmse_temp < rmse_best:
+                    rmse_best = rmse_temp
+                    model_best = regressor
+                    model_best_neurons = neurons
+                    model_best_activation = activation_function
+                    model_best_learning = learning_rate
     
     rmse_test = model_best.score(x_test, y_test)
     save_regressor(model_best)
     
-    print("\nBest model number of neurons: {}\n".format(model_best_neurons))
+    print("Best model activation function: " + model_best_activation)
+    print("Best model number of neurons: {}\n".format(model_best_neurons))
+    print("Best model learning rate: {}\n".format(model_best_learning))
     print("\nBest regressor error: {}\n".format(rmse_test))
     
     return  model_best_neurons
@@ -336,7 +369,7 @@ def example_main():
     # This example trains on the whole available dataset. 
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
-    regressor = Regressor(x_train, nb_epoch = 10)
+    regressor = Regressor(x_train, nb_epoch = 10, hidden_size = 3)
     regressor.fit(x_train, y_train)
     save_regressor(regressor)
 
