@@ -28,7 +28,11 @@ class Regressor():
         X, _ = self._preprocessor(x, training = True)
         self.input_size = X.shape[1]
         self.output_size = 1
-        self.nb_epoch = nb_epoch 
+        self.nb_epoch = nb_epoch
+
+        self.linear = torch.nn.Linear(self.input_size,self.output_size)
+        self.criterion = torch.nn.MSELoss()
+        self.optimiser = torch.optim.SGD(self.linear.parameters(), lr=0.0001)
         return
 
         #######################################################################
@@ -66,7 +70,7 @@ class Regressor():
         # If training initialise label binarizer for ocean proximity
         if training:
             self.encoder = LabelBinarizer()
-            self.encoder.fit(x_train['ocean_proximity'])
+            self.encoder.fit(x['ocean_proximity'])
         
         # Apply label binarization to x
         transformed = self.encoder.transform(x['ocean_proximity'])
@@ -99,6 +103,9 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+
+    def forward(self, x):
+        return self.linear(x)
         
     def fit(self, x, y):
         """
@@ -119,6 +126,25 @@ class Regressor():
         #######################################################################
 
         X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
+
+        x_train_tensor = torch.from_numpy(X).float()
+        y_train_tensor = torch.from_numpy(Y).float()
+
+        x_train_tensor.requires_grad_(True)
+
+        for epoch in range(self.nb_epoch):
+            self.optimiser.zero_grad()
+
+            y_hat = self.linear(x_train_tensor)
+
+            loss = self.criterion(y_hat,y_train_tensor)
+
+            loss.backward()
+
+            self.optimiser.step()
+
+            print(f"Epoch: {epoch}\t w: {self.linear.weight.data[0]}\t b: {self.linear.bias.data[0]:.4f} \t L: {loss:.4f}")
+        
         return self
 
         #######################################################################
