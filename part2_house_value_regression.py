@@ -2,6 +2,7 @@ import torch
 import pickle
 import numpy as np
 import pandas as pd
+import math
 from sklearn.preprocessing import LabelBinarizer
 
 class Regressor():
@@ -81,10 +82,10 @@ class Regressor():
         #######################################################################
 
         # Fill missing values in x with median (quant) or mode (qual)
-        vals = x.loc[:, x.columns != "ocean_proximity"].median().to_dict()
-        vals["ocean_proximity"] = x.loc[:, x.columns == "ocean_proximity"].mode().to_dict()["ocean_proximity"][0]
-        x = x.fillna(vals)
-
+        if training:
+            self.vals = x.loc[:, x.columns != "ocean_proximity"].median().to_dict()
+            self.vals["ocean_proximity"] = x.loc[:, x.columns == "ocean_proximity"].mode().to_dict()["ocean_proximity"][0]
+        x = x.fillna(self.vals)
         # If training initialise label binarizer for ocean proximity
         if training:
             self.encoder = LabelBinarizer()
@@ -94,7 +95,6 @@ class Regressor():
         transformed = self.encoder.transform(x['ocean_proximity'])
         ohe_df = pd.DataFrame(transformed)
         x = pd.concat([x, ohe_df], axis=1).drop(['ocean_proximity'], axis=1)
-
         # Convert dataframes to numpy ndarrays
         x = x.to_numpy()
         if isinstance(y, pd.DataFrame):
@@ -141,12 +141,29 @@ class Regressor():
 
         X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
 
-        x_train_tensor = torch.from_numpy(X).float()
-        y_train_tensor = torch.from_numpy(Y).float()
-
-        x_train_tensor.requires_grad_(True)
+        batch_size = 64
+        batches = math.ceil(len(X)/batch_size)
 
         for epoch in range(self.nb_epoch):
+            # Shuffle the data
+            indices = np.random.permutation(len(X))
+            X = X[indices]
+            Y = Y[indices]
+
+            # Perform mini-batch gradient descent
+            for i in range(batches):
+                start = i*batch_size
+                if i < batches - 1:
+                    end = (i+1)*batch_size
+                else:
+                    end = len(X)
+
+            x_train_tensor = torch.from_numpy(X[start:end]).float()
+            y_train_tensor = torch.from_numpy(Y[start:end]).float()
+
+
+            x_train_tensor.requires_grad_(True)
+
             self.optimiser.zero_grad()
 
             y_hat = self.model(x_train_tensor)
@@ -156,8 +173,9 @@ class Regressor():
             loss.backward()
 
             self.optimiser.step()
+            
+           # print(f"Epoch: {epoch}\t w: {self.linear.weight.data[0]}\t b: {self.linear.bias.data[0]:.4f} \t L: {loss:.4f}")
 
-            #print(f"Epoch: {epoch}\t w: {self.model.weight.data[0]}\t b: {self.model.bias.data[0]:.4f} \t L: {loss:.4f}")
         
         return self
 
@@ -246,7 +264,7 @@ def load_regressor():
 
 
 
-def RegressorHyperParameterSearch(): 
+def RegressorHyperParameterSearch(data): 
     # Ensure to add whatever inputs you deem necessary to this function
     """
     Performs a hyper-parameter for fine-tuning the regressor implemented 
@@ -264,7 +282,40 @@ def RegressorHyperParameterSearch():
     #                       ** START OF YOUR CODE **
     #######################################################################
 
-    return  # Return the chosen hyper parameters
+    rmse_best = float('inf')
+    model_best_neurons = 0
+    data.sample(frac=1).reset_index(drop=True)
+    output_label = "median_house_value"
+    x = data.loc[:, data.columns != output_label]
+    y = data.loc[:, [output_label]]
+    split_train = int(0.8 * len(x))
+    split_val = int(0.9*len(x))
+    x_train = x[:split_train].reset_index(drop=True)
+    x_val = x[split_train:split_val].reset_index(drop=True)
+    x_test = x[split_val:].reset_index(drop=True)
+    y_train = y[:split_train].reset_index(drop=True)
+    y_val = y[split_train:split_val].reset_index(drop=True)
+    y_test = y[split_val:].reset_index(drop=True)
+    for i in range(1,2):
+    #    "add something like hidden_layer_neurons = i"
+    #    "x_val, y_val, x_test, y_test yet to be defined"
+        regressor = Regressor(x_train, nb_epoch = 10)
+        regressor.fit(x_train, y_train)
+        rmse_temp = regressor.score(x_val, y_val)
+        if rmse_temp < rmse_best:
+            rmse_best = rmse_temp
+            model_best = regressor
+            model_best_neurons = i
+    
+    rmse_test = model_best.score(x_test, y_test)
+    save_regressor(model_best)
+    
+    print("\nBest model number of neurons: {}\n".format(model_best_neurons))
+    print("\nBest regressor error: {}\n".format(rmse_test))
+    
+    return  model_best_neurons
+    
+    # Return the chosen hyper parameters
 
     #######################################################################
     #                       ** END OF YOUR CODE **
@@ -299,5 +350,6 @@ def example_main():
 
 
 if __name__ == "__main__":
-    example_main()
+    data = pd.read_csv("housing.csv") 
+    RegressorHyperParameterSearch(data)
 
