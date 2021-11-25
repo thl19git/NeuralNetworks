@@ -103,7 +103,7 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
         
-    def fit(self, x, y):
+    def fit(self, x, y, v_x=None, v_y=None):
         """
         Regressor training function
 
@@ -122,9 +122,15 @@ class Regressor():
         #######################################################################
 
         X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
+        if isinstance(v_x, pd.DataFrame) and isinstance(v_y, pd.DataFrame):
+            early_stop = True
+            stop_count = 1
 
         batch_size = 64
         batches = math.ceil(len(X)/batch_size)
+
+        best_score = float('inf')
+        old_score = float('inf')
 
         for epoch in range(self.nb_epoch):
             # Shuffle the data
@@ -146,17 +152,27 @@ class Regressor():
                 x_train_tensor.requires_grad_(True)
 
                 self.optimiser.zero_grad()
-
                 y_hat = self.linear(x_train_tensor)
-
                 loss = self.criterion(y_hat,y_train_tensor)
-
                 loss.backward()
-
                 self.optimiser.step()
+
+            if early_stop:
+                rsme = self.score(v_x,v_y)
+                if rsme < best_score:
+                    best_score = rsme
+                    best_model = self
+                if stop_count == 10:
+                    if rsme >= old_score:
+                        break
+                    else:
+                        stop_count = 0
+                else:
+                    stop_count += 1
                 
            # print(f"Epoch: {epoch}\t w: {self.linear.weight.data[0]}\t b: {self.linear.bias.data[0]:.4f} \t L: {loss:.4f}")
-        
+        if early_stop:
+            return best_model
         return self
 
         #######################################################################
@@ -279,8 +295,8 @@ def RegressorHyperParameterSearch(data):
     for i in range(1,2):
     #    "add something like hidden_layer_neurons = i"
     #    "x_val, y_val, x_test, y_test yet to be defined"
-        regressor = Regressor(x_train, nb_epoch = 10)
-        regressor.fit(x_train, y_train)
+        regressor = Regressor(x_train, nb_epoch = 1000)
+        regressor.fit(x_train, y_train, x_val, y_val)
         rmse_temp = regressor.score(x_val, y_val)
         if rmse_temp < rmse_best:
             rmse_best = rmse_temp
