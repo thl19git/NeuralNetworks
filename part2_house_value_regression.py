@@ -246,7 +246,28 @@ def RegressorHyperParameterSearch():
     #                       ** START OF YOUR CODE **
     #######################################################################
 
-    return  # Return the chosen hyper parameters
+    rmse_best = float('inf')
+    model_best_neurons = 0
+    for i in range(1,14):
+        "add something like hidden_layer_neurons = i"
+        "x_val, y_val, x_test, y_test yet to be defined"
+        regressor = Regressor(x_train, nb_epoch = 10, i)
+        regressor.fit(x_train, y_train)
+        rmse_temp = regressor.score(x_val, y_val)
+        if rmse_temp < rmse_best:
+            rmse_best = rmse_temp
+            model_best = regressor
+            model_best_neurons = i
+    
+    rmse_test = model_best.score(x_test, y_test)
+    save_regressor(model_best)
+    
+    print("\nBest model number of neurons: {}\n".format(model_best_neurons))
+    print("\nBest regressor error: {}\n".format(rmse_test))
+    
+    return  model_best_neurons
+    
+    # Return the chosen hyper parameters
 
     #######################################################################
     #                       ** END OF YOUR CODE **
