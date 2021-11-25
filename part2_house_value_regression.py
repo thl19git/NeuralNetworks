@@ -143,6 +143,7 @@ class Regressor():
         #######################################################################
 
         X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
+        early_stop = False
         if isinstance(v_x, pd.DataFrame) and isinstance(v_y, pd.DataFrame):
             early_stop = True
             stop_count = 1
@@ -369,7 +370,7 @@ def example_main():
     # This example trains on the whole available dataset. 
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
-    regressor = Regressor(x_train, nb_epoch = 10, hidden_size = 3)
+    regressor = Regressor(x_train, nb_epoch = 10)
     regressor.fit(x_train, y_train)
     save_regressor(regressor)
 
@@ -381,4 +382,5 @@ def example_main():
 if __name__ == "__main__":
     data = pd.read_csv("housing.csv") 
     RegressorHyperParameterSearch(data)
+    #example_main()
 
