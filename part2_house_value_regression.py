@@ -32,7 +32,7 @@ class Regressor():
 
         self.linear = torch.nn.Linear(self.input_size,self.output_size)
         self.criterion = torch.nn.MSELoss()
-        self.optimiser = torch.optim.SGD(self.linear.parameters(), lr=0.0001)
+        self.optimiser = torch.optim.SGD(self.linear.parameters(), lr=0.001)
         return
 
         #######################################################################
@@ -97,7 +97,7 @@ class Regressor():
             y = (y - self.y_min)/(self.y_max-self.y_min)
 
         # Return preprocessed x and y, return None for y if it was None
-        return x, (y if isinstance(y, pd.np.ndarray) else None)
+        return x, (y if isinstance(y, np.ndarray) else None)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -166,7 +166,12 @@ class Regressor():
         #######################################################################
 
         X, _ = self._preprocessor(x, training = False) # Do not forget
-        pass
+        with torch.no_grad():
+            x_test = torch.from_numpy(X).float()
+            p = self.linear(x_test).numpy()
+        #rescale predictions to convert back to standard form
+        p = p*(self.y_max-self.y_min) + self.y_min
+        return p
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -190,8 +195,7 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
-        predictions = self.predict(X)
+        predictions = self.predict(x)
         y = y.to_numpy()
         mse = np.mean((predictions - y) ** 2)
         rmse = np.sqrt(mse)
