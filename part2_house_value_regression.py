@@ -343,7 +343,7 @@ def RegressorHyperParameterSearch(data):
     print("Best model learning rate: {}\n".format(model_best_learning))
     print("\nBest regressor error: {}\n".format(rmse_test))
     
-    return  model_best_neurons
+    return  model_best_neurons, model_best_activation, model_best_learning
     
     # Return the chosen hyper parameters
 
